@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ライバーレビュー</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; background-color: #f4f4f4; }
+        
+        /* ヘッダーの色: 葡萄染色 (#522f60) */
+        header { background-color: #522f60; color: white; padding: 1em; text-align: center; }
+        h1 { margin: 0; font-size: 1.5em; }
+
+        main { padding: 20px; max-width: 800px; margin: 0 auto; }
+        .liver-info { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        
+        /* レビュー表示エリア */
+        #reviews-container { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .review-item { border-bottom: 1px solid #eee; padding: 15px 0; }
+        .review-header { display: flex; justify-content: space-between; color: #666; font-size: 0.9em; margin-bottom: 5px; }
+        .review-rating { color: #f39c12; /* 星の色 */ font-weight: bold; }
+        .review-comment { line-height: 1.5; }
+
+        /* 投稿フォームエリア */
+        #post-form-container { background: white; padding: 20px; border-radius: 8px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-radius; }
+        textarea { resize: vertical; height: 100px; }
+        button { background-color: #522f60; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        button:hover { opacity: 0.9; }
+        
+        /* ローディング・メッセージ */
+        #loading, #message { text-align: center; margin: 20px 0; display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>ライバーレビューサイト</h1>
+</header>
+
+<main>
+    <div class="liver-info">
+        <h2 id="liver-name">ライバー名</h2>
+    </div>
+
+    <div id="reviews-container">
+        <h3>みんなのレビュー</h3>
+        <div id="loading">レビューを読み込み中...</div>
+        <div id="reviews-list">
+            </div>
+    </div>
+
+    <div id="post-form-container">
+        <h3>レビューを投稿する</h3>
+        <div id="message"></div>
+        <form id="review-form">
+            <div class="form-group">
+                <label for="username">お名前（ニックネーム可）</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="rating">評価</label>
+                <select id="rating" name="rating" required>
+                    <option value="5">★★★★★ (5)</option>
+                    <option value="4">★★★★☆ (4)</option>
+                    <option value="3">★★★☆☆ (3)</option>
+                    <option value="2">★★☆☆☆ (2)</option>
+                    <option value="1">★☆☆☆☆ (1)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="comment">コメント</label>
+                <textarea id="comment" name="comment" required></textarea>
+            </div>
+            <button type="submit">投稿する</button>
+        </form>
+    </div>
+</main>
+
+<script>
+    // --- 設定 ---
+    // 先ほど控えた GAS ウェブアプリのURLをここに貼り付けます
+    const GAS_API_URL = 'YOUR_GAS_WEB_APP_URL_HERE'; 
+
+    // URLパラメータからライバーIDを取得 (例: liver.html?id=liverA)
+    const urlParams = new URLSearchParams(window.location.search);
+    const liverId = urlParams.get('id');
+
+    // ライバーIDがない場合はトップページへリダイレクトするなどが必要
+    if (!liverId) {
+        alert('ライバーが指定されていません。');
+        // window.location.href = 'index.html'; 
+    } else {
+        document.getElementById('liver-name').innerText = `ライバー ID: ${liverId}`;
+        // レビューを表示
+        fetchReviews();
+    }
+
+    // --- レビュー表示機能 ---
+    async function fetchReviews() {
+        const loadingE = document.getElementById('loading');
+        const listE = document.getElementById('reviews-list');
+        loadingE.style.display = 'block';
+        listE.innerHTML = '';
+
+        try {
+            // GETリクエストでデータを取得
+            const response = await fetch(`${GAS_API_URL}?liver_id=${liverId}`);
+            const reviews = await response.json();
+
+            loadingE.style.display = 'none';
+
+            if (reviews.length === 0) {
+                listE.innerHTML = '<p>まだレビューはありません。</p>';
+                return;
+            }
+
+            reviews.forEach(review => {
+                const item = document.createElement('div');
+                item.className = 'review-item';
+                
+                // 星の生成
+                const stars = '★'.repeat(review.Rating) + '☆'.repeat(5 - review.Rating);
+                
+                item.innerHTML = `
+                    <div class="review-header">
+                        <span class="review-username">${review.Username} さん</span>
+                        <span class="review-date">${new Date(review.Timestamp).toLocaleDateString()}</span>
+                    </div>
+                    <div class="review-rating">${stars} (${review.Rating})</div>
+                    <div class="review-comment">${review.Comment}</div>
+                `;
+                listE.appendChild(item);
+            });
+
+        } catch (error) {
+            console.error('エラー:', error);
+            loadingE.innerText = 'レビューの読み込みに失敗しました。';
+        }
+    }
+
+    // --- レビュー投稿機能 ---
+    document.getElementById('review-form').addEventListener('submit', async function(e) {
+        e.preventDefault(); // フォームのデフォルトの送信動作を無効化
+
+        const formData = new FormData(this);
+        const data = {
+            liver_id: liverId,
+            username: formData.get('username'),
+            rating: parseInt(formData.get('rating')),
+            comment: formData.get('comment')
+        };
+
+        const messageE = document.getElementById('message');
+        const submitBtn = this.querySelector('button[type="submit"]');
+
+        submitBtn.disabled = true; // ボタンを無効化
+        messageE.innerText = '投稿中...';
+        messageE.style.display = 'block';
+        messageE.style.color = 'black';
+
+        try {
+            // POSTリクエストでデータを送信
+            const response = await fetch(GAS_API_URL, {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+
+            if (result.result === 'success') {
+                messageE.innerText = '投稿しました！ページを更新して確認してください。';
+                messageE.style.color = 'green';
+                this.reset(); // フォームをリセット
+                // 自動で再読み込みする場合は以下を有効に
+                // setTimeout(() => location.reload(), 1500); 
+            } else {
+                messageE.innerText = '投稿に失敗しました: ' + result.message;
+                messageE.style.color = 'red';
+            }
+
+        } catch (error) {
+            console.error('エラー:', error);
+            messageE.innerText = '通信エラーが発生しました。';
+            messageE.style.color = 'red';
+        } finally {
+            submitBtn.disabled = false; // ボタンを元に戻す
+        }
+    });
+</script>
+
+</body>
+</html>
