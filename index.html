@@ -15,6 +15,7 @@
         
         /* タレント選択エリア */
         #liver-select-container { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; border: 1px solid #eee; }
+        /* 変更：文言「レビューするタレント：」を「タレント」に */
         label[for="talent-select"] { font-weight: bold; font-size: 1.1em; }
         #talent-select { flex-grow: 1; padding: 12px; border: 2px solid #522f60; border-radius: 6px; font-size: 1em; cursor: pointer; background-color: white; }
         #talent-select:focus { outline: none; box-shadow: 0 0 0 3px rgba(82, 47, 96, 0.2); }
@@ -26,15 +27,19 @@
         .review-item:last-child { border-bottom: none; }
         .review-header { display: flex; justify-content: space-between; color: #666; font-size: 0.9em; margin-bottom: 5px; }
         .review-rating { color: #f39c12; /* 星の色 */ font-weight: bold; font-size: 1.1em; }
-        .review-comment { line-height: 1.6; white-space: pre-wrap; /* 改行を反映 */ }
+        
+        /* 追加：科目表示用のスタイル */
+        .review-subject { color: #522f60; font-weight: bold; font-size: 0.9em; margin-left: 10px; }
+
+        .review-comment { line-height: 1.6; white-space: pre-wrap; /* 改行を反映 */ margin-top: 10px; }
 
         /* 投稿フォームエリア */
         #post-form-container { background: white; padding: 20px; border-radius: 8px; display: none; /* 最初は非表示 */ }
         #post-form-container h3 { border-bottom: 2px solid #522f60; padding-bottom: 10px; margin-top: 0; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 1em; }
-        input[type="text"]:focus, select:focus, textarea:focus { border-color: #522f60; outline: none; }
+        input[type="text"], input[type="email"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 1em; }
+        input[type="text"]:focus, input[type="email"]:focus, select:focus, textarea:focus { border-color: #522f60; outline: none; }
         textarea { resize: vertical; height: 120px; font-family: inherit; }
         button { background-color: #522f60; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.1em; font-weight: bold; width: 100%; }
         button:hover { opacity: 0.9; }
@@ -53,7 +58,7 @@
 
 <main>
     <div id="liver-select-container">
-        <label for="talent-select">タレント</label>
+        <label for="talent-select">タレント：</label>
         <select id="talent-select">
             <option value="">-- タレントを選択してください --</option>
             <option value="長谷川ヘルツ">長谷川ヘルツ</option>
@@ -81,9 +86,15 @@
         <div id="message"></div>
         <form id="review-form">
             <div class="form-group">
-                <label for="username">お名前</label>
+                <label for="username">投稿者名</label>
                 <input type="text" id="username" name="username" required placeholder="例：長谷川太郎">
             </div>
+            
+            <div class="form-group">
+                <label for="email">メールアドレス</label>
+                <input type="email" id="email" name="email" required placeholder="例：example@mail.com">
+            </div>
+
             <div class="form-group">
                 <label for="rating">評価</label>
                 <select id="rating" name="rating" required>
@@ -94,11 +105,25 @@
                     <option value="1">★☆☆☆☆</option>
                 </select>
             </div>
+
             <div class="form-group">
-                <label for="comment">コメント</label>
-                <textarea id="comment" name="comment" required placeholder="レビューコメントを入力してください"></textarea>
+                <label for="subject">選択科目</label>
+                <select id="subject" name="subject" required>
+                    <option value="">-- 科目を選択してください --</option>
+                    <option value="ボイトレ">ボイトレ</option>
+                    <option value="ダンス">ダンス</option>
+                    <option value="トーク">トーク</option>
+                    <option value="演技">演技</option>
+                    <option value="作詞・作曲">作詞・作曲</option>
+                </select>
             </div>
-            <button type="submit" id="submit-btn">投稿する</button>
+
+            <div class="form-group">
+                <label for="comment">コメント・エピソード</label>
+                <textarea id="comment" name="comment" required placeholder="レビューコメント・エピソードを入力してください"></textarea>
+            </div>
+            
+            <button type="submit" id="submit-btn">この内容を送信する</button>
         </form>
     </div>
 </main>
@@ -179,12 +204,15 @@
                 const date = new Date(review.Timestamp);
                 const dateStr = `${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
                 
+                // 変更：科目（Subject）を表示するように追加
                 item.innerHTML = `
                     <div class="review-header">
                         <span class="review-username">${escapeHtml(review.Username)} さん</span>
                         <span class="review-date">${dateStr}</span>
                     </div>
-                    <div class="review-rating">${stars} (${review.Rating})</div>
+                    <div class="review-rating-row">
+                        <span class="review-rating">${stars} (${review.Rating})</span>
+                        <span class="review-subject">[科目：${escapeHtml(review.Subject)}]</span> </div>
                     <div class="review-comment">${escapeHtml(review.Comment)}</div>
                 `;
                 reviewsListE.appendChild(item);
@@ -202,10 +230,13 @@
         e.preventDefault(); // フォームのデフォルトの送信動作を無効化
 
         const formData = new FormData(this);
+        // 変更：新しい項目「email」と「subject」を追加
         const data = {
             liver_id: liverId,
             username: formData.get('username'),
+            email: formData.get('email'),    // メールアドレスを取得
             rating: parseInt(formData.get('rating')),
+            subject: formData.get('subject'), // 選択科目を取得
             comment: formData.get('comment')
         };
 
