@@ -3,62 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ライバーレビュー</title>
+    <title>タレントレビューサイト</title>
     <style>
-        body { font-family: sans-serif; margin: 0; background-color: #f4f4f4; }
+        body { font-family: sans-serif; margin: 0; background-color: #f4f4f4; color: #333; }
         
         /* ヘッダーの色: 葡萄染色 (#522f60) */
         header { background-color: #522f60; color: white; padding: 1em; text-align: center; }
         h1 { margin: 0; font-size: 1.5em; }
 
         main { padding: 20px; max-width: 800px; margin: 0 auto; }
-        .liver-info { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
         
+        /* タレント選択エリア */
+        #liver-select-container { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; border: 1px solid #eee; }
+        label[for="talent-select"] { font-weight: bold; font-size: 1.1em; }
+        #talent-select { flex-grow: 1; padding: 12px; border: 2px solid #522f60; border-radius: 6px; font-size: 1em; cursor: pointer; background-color: white; }
+        #talent-select:focus { outline: none; box-shadow: 0 0 0 3px rgba(82, 47, 96, 0.2); }
+
         /* レビュー表示エリア */
-        #reviews-container { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        #reviews-container { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: none; /* 最初は非表示 */ }
+        #reviews-container h3 { border-bottom: 2px solid #522f60; padding-bottom: 10px; margin-top: 0; }
         .review-item { border-bottom: 1px solid #eee; padding: 15px 0; }
+        .review-item:last-child { border-bottom: none; }
         .review-header { display: flex; justify-content: space-between; color: #666; font-size: 0.9em; margin-bottom: 5px; }
-        .review-rating { color: #f39c12; /* 星の色 */ font-weight: bold; }
-        .review-comment { line-height: 1.5; }
+        .review-rating { color: #f39c12; /* 星の色 */ font-weight: bold; font-size: 1.1em; }
+        .review-comment { line-height: 1.6; white-space: pre-wrap; /* 改行を反映 */ }
 
         /* 投稿フォームエリア */
-        #post-form-container { background: white; padding: 20px; border-radius: 8px; }
+        #post-form-container { background: white; padding: 20px; border-radius: 8px; display: none; /* 最初は非表示 */ }
+        #post-form-container h3 { border-bottom: 2px solid #522f60; padding-bottom: 10px; margin-top: 0; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-radius; }
-        textarea { resize: vertical; height: 100px; }
-        button { background-color: #522f60; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }
+        input[type="text"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 1em; }
+        input[type="text"]:focus, select:focus, textarea:focus { border-color: #522f60; outline: none; }
+        textarea { resize: vertical; height: 120px; font-family: inherit; }
+        button { background-color: #522f60; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 1.1em; font-weight: bold; width: 100%; }
         button:hover { opacity: 0.9; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
         
         /* ローディング・メッセージ */
-        #loading, #message { text-align: center; margin: 20px 0; display: none; }
+        #loading, #message { text-align: center; margin: 20px 0; display: none; font-weight: bold; }
+        #loading { color: #522f60; }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>ライバーレビューサイト</h1>
+    <h1>タレントレビューサイト</h1>
 </header>
 
 <main>
-    <div class="liver-info">
-        <h2 id="liver-name">ライバー名</h2>
+    <div id="liver-select-container">
+        <label for="talent-select">レビューするタレント：</label>
+        <select id="talent-select">
+            <option value="">-- タレントを選択してください --</option>
+            <option value="talent_a">タレントA</option>
+            <option value="talent_b">タレントB</option>
+            <option value="talent_c">タレントC</option>
+            <option value="talent_d">タレントD</option>
+        </select>
     </div>
+
+    <div id="loading">レビューを読み込み中...</div>
 
     <div id="reviews-container">
         <h3>みんなのレビュー</h3>
-        <div id="loading">レビューを読み込み中...</div>
         <div id="reviews-list">
             </div>
     </div>
 
     <div id="post-form-container">
-        <h3>レビューを投稿する</h3>
+        <h3 id="form-title">タレントA さんへのレビューを投稿</h3>
         <div id="message"></div>
         <form id="review-form">
             <div class="form-group">
                 <label for="username">お名前（ニックネーム可）</label>
-                <input type="text" id="username" name="username" required>
+                <input type="text" id="username" name="username" required placeholder="例：名無しさん">
             </div>
             <div class="form-group">
                 <label for="rating">評価</label>
@@ -72,77 +91,109 @@
             </div>
             <div class="form-group">
                 <label for="comment">コメント</label>
-                <textarea id="comment" name="comment" required></textarea>
+                <textarea id="comment" name="comment" required placeholder="レビューコメントを入力してください"></textarea>
             </div>
-            <button type="submit">投稿する</button>
+            <button type="submit" id="submit-btn">投稿する</button>
         </form>
     </div>
 </main>
 
 <script>
     // --- 設定 ---
-    // 先ほど控えた GAS ウェブアプリのURLをここに貼り付けます
+    // GAS ウェブアプリのURL
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzCpspfwuhBLffVwk-_Ba6lkKd1zdHUV1iueK4JJgcf_2FvOmMIgRgPgEDFN8a4yS5WPg/exec'; 
 
-    // URLパラメータからライバーIDを取得 (例: liver.html?id=liverA)
-    const urlParams = new URLSearchParams(window.location.search);
-    const liverId = urlParams.get('id');
+    // グローバルな liverId 変数を定義 (最初は空)
+    let liverId = '';
 
-    // ライバーIDがない場合はトップページへリダイレクトするなどが必要
-    if (!liverId) {
-        alert('ライバーが指定されていません。');
-        // window.location.href = 'index.html'; 
-    } else {
-        document.getElementById('liver-name').innerText = `ライバー ID: ${liverId}`;
-        // レビューを表示
-        fetchReviews();
-    }
+    // DOM要素の取得
+    const talentSelectE = document.getElementById('talent-select');
+    const reviewsContainerE = document.getElementById('reviews-container');
+    const reviewsListE = document.getElementById('reviews-list');
+    const postFormContainerE = document.getElementById('post-form-container');
+    const formTitleE = document.getElementById('form-title');
+    const loadingE = document.getElementById('loading');
+    const messageE = document.getElementById('message');
+    const reviewFormE = document.getElementById('review-form');
+    const submitBtnE = document.getElementById('submit-btn');
+
+    // --- タレント選択イベント ---
+    talentSelectE.addEventListener('change', function() {
+        liverId = this.value; // 選択されたIDを取得
+        const talentName = this.options[this.selectedIndex].text; // 選択された名前を取得
+
+        // メッセージ・フォームをリセット
+        messageE.style.display = 'none';
+        reviewFormE.reset();
+
+        if (liverId) {
+            // タレントが選択された場合、エリアを表示して読み込み
+            reviewsContainerE.style.display = 'block';
+            postFormContainerE.style.display = 'block';
+            formTitleE.innerText = `${talentName} さんへのレビューを投稿`;
+            fetchReviews();
+        } else {
+            // タレントが選択されていない場合、エリアを非表示に
+            reviewsContainerE.style.display = 'none';
+            postFormContainerE.style.display = 'none';
+            reviewsListE.innerHTML = '';
+        }
+    });
+
 
     // --- レビュー表示機能 ---
     async function fetchReviews() {
-        const loadingE = document.getElementById('loading');
-        const listE = document.getElementById('reviews-list');
         loadingE.style.display = 'block';
-        listE.innerHTML = '';
+        reviewsListE.innerHTML = '';
 
         try {
             // GETリクエストでデータを取得
             const response = await fetch(`${GAS_API_URL}?liver_id=${liverId}`);
+            if (!response.ok) throw new Error('ネットワークエラー');
             const reviews = await response.json();
 
             loadingE.style.display = 'none';
 
             if (reviews.length === 0) {
-                listE.innerHTML = '<p>まだレビューはありません。</p>';
+                reviewsListE.innerHTML = '<p style="text-align:center;color:#666;">まだレビューはありません。</p>';
                 return;
             }
+
+            // 日付順（新しい順）に並べ替え
+            reviews.sort((a, b) => new Date(b.Timestamp) - new Date(a.Timestamp));
 
             reviews.forEach(review => {
                 const item = document.createElement('div');
                 item.className = 'review-item';
                 
                 // 星の生成
-                const stars = '★'.repeat(review.Rating) + '☆'.repeat(5 - review.Rating);
+                const ratingNum = parseInt(review.Rating);
+                const stars = '★'.repeat(ratingNum) + '☆'.repeat(5 - ratingNum);
+                
+                // 日付のフォーマット
+                const date = new Date(review.Timestamp);
+                const dateStr = `${date.getFullYear()}/${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
                 
                 item.innerHTML = `
                     <div class="review-header">
-                        <span class="review-username">${review.Username} さん</span>
-                        <span class="review-date">${new Date(review.Timestamp).toLocaleDateString()}</span>
+                        <span class="review-username">${escapeHtml(review.Username)} さん</span>
+                        <span class="review-date">${dateStr}</span>
                     </div>
                     <div class="review-rating">${stars} (${review.Rating})</div>
-                    <div class="review-comment">${review.Comment}</div>
+                    <div class="review-comment">${escapeHtml(review.Comment)}</div>
                 `;
-                listE.appendChild(item);
+                reviewsListE.appendChild(item);
             });
 
         } catch (error) {
             console.error('エラー:', error);
-            loadingE.innerText = 'レビューの読み込みに失敗しました。';
+            loadingE.style.display = 'none';
+            reviewsListE.innerHTML = '<p style="text-align:center;color:red;font-weight:bold;">レビューの読み込みに失敗しました。</p>';
         }
     }
 
     // --- レビュー投稿機能 ---
-    document.getElementById('review-form').addEventListener('submit', async function(e) {
+    reviewFormE.addEventListener('submit', async function(e) {
         e.preventDefault(); // フォームのデフォルトの送信動作を無効化
 
         const formData = new FormData(this);
@@ -153,10 +204,7 @@
             comment: formData.get('comment')
         };
 
-        const messageE = document.getElementById('message');
-        const submitBtn = this.querySelector('button[type="submit"]');
-
-        submitBtn.disabled = true; // ボタンを無効化
+        submitBtnE.disabled = true; // ボタンを無効化
         messageE.innerText = '投稿中...';
         messageE.style.display = 'block';
         messageE.style.color = 'black';
@@ -167,14 +215,18 @@
                 method: 'POST',
                 body: JSON.stringify(data)
             });
+            if (!response.ok) throw new Error('投稿エラー');
             const result = await response.json();
 
             if (result.result === 'success') {
-                messageE.innerText = '投稿しました！ページを更新して確認してください。';
+                messageE.innerText = '投稿しました！レビュー一覧を再読み込みします...';
                 messageE.style.color = 'green';
                 this.reset(); // フォームをリセット
-                // 自動で再読み込みする場合は以下を有効に
-                // setTimeout(() => location.reload(), 1500); 
+                // 1.5秒後にレビューを再読み込み
+                setTimeout(() => {
+                    messageE.style.display = 'none';
+                    fetchReviews();
+                }, 1500); 
             } else {
                 messageE.innerText = '投稿に失敗しました: ' + result.message;
                 messageE.style.color = 'red';
@@ -182,12 +234,27 @@
 
         } catch (error) {
             console.error('エラー:', error);
-            messageE.innerText = '通信エラーが発生しました。';
+            messageE.innerText = '通信エラーが発生しました。時間をおいて再度お試しください。';
             messageE.style.color = 'red';
         } finally {
-            submitBtn.disabled = false; // ボタンを元に戻す
+            submitBtnE.disabled = false; // ボタンを元に戻す
         }
     });
+
+    // エスケープ処理（セキュリティ対策）
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&'`"<>]/g, function(match) {
+            return {
+                '&': '&amp;',
+                "'": '&#39;',
+                '`': '&#96;',
+                '"': '&quot;',
+                '<': '&lt;',
+                '>': '&gt;'
+            }[match];
+        });
+    }
 </script>
 
 </body>
